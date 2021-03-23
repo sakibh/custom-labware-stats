@@ -53,7 +53,7 @@ labware_manufacturer_df = labware_manufacturer_df.reset_index()
 labware_manufacturer_df.columns = ['Manufacturer', 'Count']
 
 #### Dashboard ####
-st.set_page_config(layout="wide")
+st.set_page_config(layout='wide', page_title='Custom Labware Statistics')
 st.title('Custom Labware Statistics')
 
 st.header(f'Total Labware Requests: {total_labware_requests}')
@@ -75,3 +75,11 @@ c1.plotly_chart(fig)
 c2.header('Labware Manufacturer')
 fig = px.pie(labware_manufacturer_df, values='Count', names='Manufacturer', hole=.3)
 c2.plotly_chart(fig)
+
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
