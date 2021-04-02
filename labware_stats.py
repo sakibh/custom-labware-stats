@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 from streamlit_echarts import st_echarts
 import os
 from Google import Create_Service
+import re
 
 CLIENT_SECRET_FILE = 'credentials.json'
 API_NAME = 'sheets'
@@ -41,6 +43,10 @@ biweekly_data = biweekly['Labware Requests']
 labware_type_df = pd.DataFrame(df['Type'].value_counts().to_frame())
 labware_type_df = labware_type_df.reset_index()
 labware_type_df.columns = ['Type', 'Count']
+labware_tips_count = labware_type_df[labware_type_df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)].sum()
+df2 = {'Type': 'Tips', 'Count': labware_tips_count['Count']}
+labware_type_df = labware_type_df[~labware_type_df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)]
+labware_type_df = labware_type_df.append(df2, ignore_index = True)
 
 # Labware Status
 labware_status_df = pd.DataFrame(df['Status'].value_counts().to_frame())
@@ -56,18 +62,21 @@ labware_manufacturer_df.columns = ['Manufacturer', 'Count']
 st.set_page_config(layout='wide', page_title='Custom Labware Statistics')
 st.title('Custom Labware Statistics')
 
+# Total Labware Requests
 st.header(f'Total Labware Requests: {total_labware_requests}')
 c1, c2 = st.beta_columns((2, 1))
-c1.bar_chart(biweekly_data)
-c2.write(biweekly_data)
+st.bar_chart(biweekly_data)
 
+# Labware Types
 st.header('Labware Types')
 c1, c2 = st.beta_columns((2, 1))
 fig = px.pie(labware_type_df, values='Count', names='Type', hole=.3)
-fig.update_layout(width=1600,height=900)
+fig.update_layout(width=1500,height=800)
+fig.update_traces(textposition = 'inside')
 c1.plotly_chart(fig)
-c2.write(labware_type_df)
 
+
+# Labware Status and Manufacturer
 c1, c2 = st.beta_columns((1, 1))
 c1.header('Labware Status')
 fig = px.pie(labware_status_df, values='Status Count', names='Status', hole=.3)
