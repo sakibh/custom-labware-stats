@@ -32,7 +32,10 @@ df = pd.DataFrame(data, columns=columns)
 total_labware_requests = len(df)
 
 # Change Date Format
-df['Submitted At'] = pd.to_datetime(df['Submitted At'])
+df['Submitted At'] = pd.to_datetime(df['Submitted At']).dt.normalize()
+
+# Clean Up Manufacturers Data
+df['Manufacturer'][df['Manufacturer'] == 'Manufacturer not listed below'] = df['< text field']
 
 # Bi-Weekly Data
 biweekly = df.resample('2W', on='Submitted At').count()
@@ -58,6 +61,19 @@ labware_manufacturer_df = pd.DataFrame(df['Manufacturer'].value_counts().to_fram
 labware_manufacturer_df = labware_manufacturer_df.reset_index()
 labware_manufacturer_df.columns = ['Manufacturer', 'Count']
 
+# Well Plate Manufacturers
+wellplate_manufacturers_df = df[df['Type'] == 'Well Plate']
+wellplate_manufacturers_df = pd.DataFrame(wellplate_manufacturers_df['Manufacturer'].value_counts().to_frame())
+wellplate_manufacturers_df = wellplate_manufacturers_df.reset_index()
+wellplate_manufacturers_df.columns = ['Manufacturer', 'Count']
+
+# Tip Manufacturers
+tips_re = re.compile('Tips')
+tip_manufacturers_df = df[df['Type'].str.contains(r'Tip|tip')]
+tip_manufacturers_df = pd.DataFrame(tip_manufacturers_df['Manufacturer'].value_counts().to_frame())
+tip_manufacturers_df = tip_manufacturers_df.reset_index()
+tip_manufacturers_df.columns = ['Manufacturer', 'Count']
+
 #### Dashboard ####
 st.set_page_config(layout='wide', page_title='Custom Labware Statistics')
 st.title('Custom Labware Statistics')
@@ -71,18 +87,30 @@ st.bar_chart(biweekly_data)
 st.header('Labware Types')
 c1, c2 = st.beta_columns((2, 1))
 fig = px.pie(labware_type_df, values='Count', names='Type', hole=.3)
-fig.update_layout(width=1500,height=800)
+fig.update_layout(width=1440,height=720)
 fig.update_traces(textposition = 'inside')
 c1.plotly_chart(fig)
-
 
 # Labware Status and Manufacturer
 c1, c2 = st.beta_columns((1, 1))
 c1.header('Labware Status')
 fig = px.pie(labware_status_df, values='Status Count', names='Status', hole=.3)
+fig.update_traces(textposition = 'inside')
 c1.plotly_chart(fig)
 c2.header('Labware Manufacturer')
-fig = px.pie(labware_manufacturer_df, values='Count', names='Manufacturer', hole=.3)
+# fig = px.pie(labware_manufacturer_df, values='Count', names='Manufacturer', hole=.3)
+# c2.plotly_chart(fig)
+c2.write(labware_manufacturer_df)
+
+# Labware Manufacturer for Well Plates and Tip Racks
+c1, c2 = st.beta_columns((1, 1))
+c1.header('Well Plate Manufacturers')
+fig = px.pie(wellplate_manufacturers_df, values='Count', names='Manufacturer', hole=.3)
+fig.update_traces(textposition = 'inside')
+c1.plotly_chart(fig)
+c2.header('Tip Manufacturers')
+fig = px.pie(tip_manufacturers_df, values='Count', names='Manufacturer', hole=.3)
+fig.update_traces(textposition = 'inside')
 c2.plotly_chart(fig)
 
 hide_streamlit_style = """
