@@ -7,6 +7,8 @@ from streamlit_echarts import st_echarts
 import os
 from Google import Create_Service
 import re
+import datetime
+from datetime import timedelta
 
 CLIENT_SECRET_FILE = 'credentials.json'
 API_NAME = 'sheets'
@@ -27,9 +29,7 @@ result = service.spreadsheets().values().get(
 columns = result['values'][0]
 data = result['values'][1:]
 df = pd.DataFrame(data, columns=columns)
-
-# Total Labware Requests
-total_labware_requests = len(df)
+pd.set_option('display.max_columns', None)
 
 # Change Date Format
 df['Submitted At'] = pd.to_datetime(df['Submitted At']).dt.normalize()
@@ -37,81 +37,115 @@ df['Submitted At'] = pd.to_datetime(df['Submitted At']).dt.normalize()
 # Clean Up Manufacturers Data
 df['Manufacturer'][df['Manufacturer'] == 'Manufacturer not listed below'] = df['< text field']
 
-# Bi-Weekly Data
-biweekly = df.resample('2W', on='Submitted At').count()
-biweekly['Labware Requests'] = biweekly['Name']
-biweekly_data = biweekly['Labware Requests']
+class DataProcessor:
+    def __init__(self, data):
+        self.data = data
 
-# Labware Type Count
-labware_type_df = pd.DataFrame(df['Type'].value_counts().to_frame())
-labware_type_df = labware_type_df.reset_index()
-labware_type_df.columns = ['Type', 'Count']
-labware_tips_count = labware_type_df[labware_type_df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)].sum()
-df2 = {'Type': 'Tips', 'Count': labware_tips_count['Count']}
-labware_type_df = labware_type_df[~labware_type_df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)]
-labware_type_df = labware_type_df.append(df2, ignore_index = True)
+    def get_data(self):
+        return self.data
 
-# Labware Status
-labware_status_df = pd.DataFrame(df['Status'].value_counts().to_frame())
-labware_status_df = labware_status_df.reset_index()
-labware_status_df.columns = ['Status', 'Status Count']
+    def filter_by_date(self, start_date, end_date):
+        start_date = start_date.strftime('%m/%d/%Y')
+        end_date = end_date.strftime('%m/%d/%Y')
+        date_filter = (self.data['Submitted At'] > start_date) & (self.data['Submitted At'] <= end_date)
+        self.data = self.data.loc[date_filter]
+        return len(self.data) 
 
-# Manufacturer Count
-labware_manufacturer_df = pd.DataFrame(df['Manufacturer'].value_counts().to_frame())
-labware_manufacturer_df = labware_manufacturer_df.reset_index()
-labware_manufacturer_df.columns = ['Manufacturer', 'Count']
+    def get_biweekly_data(self):
+        df = self.data.resample('2W', on='Submitted At').count()
+        return df['Name']
 
-# Well Plate Manufacturers
-wellplate_manufacturers_df = df[df['Type'] == 'Well Plate']
-wellplate_manufacturers_df = pd.DataFrame(wellplate_manufacturers_df['Manufacturer'].value_counts().to_frame())
-wellplate_manufacturers_df = wellplate_manufacturers_df.reset_index()
-wellplate_manufacturers_df.columns = ['Manufacturer', 'Count']
+    def get_labware_type(self):
+        df = pd.DataFrame(self.data['Type'].value_counts().to_frame())
+        df = df.reset_index()
+        df.columns = ['Type', 'Count']
+        labware_tips_count = df[df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)].sum()
+        df2 = {'Type': 'Tips', 'Count': labware_tips_count['Count']}
+        df = df[~df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)]
+        df = df.append(df2, ignore_index = True)
+        return df
 
-# Tip Manufacturers
-tips_re = re.compile('Tips')
-tip_manufacturers_df = df[df['Type'].str.contains(r'Tip|tip')]
-tip_manufacturers_df = pd.DataFrame(tip_manufacturers_df['Manufacturer'].value_counts().to_frame())
-tip_manufacturers_df = tip_manufacturers_df.reset_index()
-tip_manufacturers_df.columns = ['Manufacturer', 'Count']
+    def get_labware_status(self):
+        df = pd.DataFrame(self.data['Status'].value_counts().to_frame())
+        df = df.reset_index()
+        df.columns = ['Status', 'Count']
+        return df
+
+    def get_manufacturer_count(self):
+        df = pd.DataFrame(self.data['Manufacturer'].value_counts().to_frame())
+        df = df.reset_index()
+        df.columns = ['Manufacturer', 'Count']
+        return df
+
+    def get_wellplate_manufacturers(self):
+        df = self.data[self.data['Type'] == 'Well Plate']
+        df = pd.DataFrame(df['Manufacturer'].value_counts().to_frame())
+        df = df.reset_index()
+        df.columns = ['Manufacturer', 'Count']
+        return df
+
+    def get_tip_manufacturers(self):
+        # tips_re = re.compile('Tips')
+        df = self.data[self.data['Type'].str.contains(r'Tip|tip')]
+        df = pd.DataFrame(df['Manufacturer'].value_counts().to_frame())
+        df = df.reset_index()
+        df.columns = ['Manufacturer', 'Count']
+        return df
+
+def get_two_week_date():
+    today = datetime.date.today() 
+    two_weeks_ago = today - timedelta(days=90)
+    return two_weeks_ago
+
+labwareStats = DataProcessor(df)
+
+# Default Date Range
+labwareStats.filter_by_date(get_two_week_date(), datetime.date.today())
 
 #### Dashboard ####
 st.set_page_config(layout='wide', page_title='Custom Labware Statistics')
 st.title('Custom Labware Statistics')
 
 # Total Labware Requests
-st.header(f'Total Labware Requests: {total_labware_requests}')
-c1, c2 = st.beta_columns((2, 1))
-st.bar_chart(biweekly_data)
 
-# Labware Types
-st.header('Labware Types')
-c1, c2 = st.beta_columns((2, 1))
-fig = px.pie(labware_type_df, values='Count', names='Type', hole=.3)
-fig.update_layout(width=1440,height=720)
-fig.update_traces(textposition = 'inside')
-c1.plotly_chart(fig)
+# Report Date Range
+c1, c2, c3, c4, c5 = st.beta_columns((1, 1, 1, 1, 1))
+start = c1.date_input("Start Date", get_two_week_date())
+end = c2.date_input("End Date", datetime.date.today())
+if st.button('Run'):
+    labwareStats.filter_by_date(start, end)
 
-# Labware Status and Manufacturer
+# Bi-Weekly Data Chart
+st.header(f'Total Labware Requests: {len(labwareStats.get_data())}')
+st.bar_chart(labwareStats.get_biweekly_data())
+
+# Labware Types/Status
 c1, c2 = st.beta_columns((1, 1))
-c1.header('Labware Status')
-fig = px.pie(labware_status_df, values='Status Count', names='Status', hole=.3)
-fig.update_traces(textposition = 'inside')
-c1.plotly_chart(fig)
-c2.header('Labware Manufacturer')
-# fig = px.pie(labware_manufacturer_df, values='Count', names='Manufacturer', hole=.3)
-# c2.plotly_chart(fig)
-c2.write(labware_manufacturer_df)
+c1.header('Labware Types')
+fig1 = px.pie(labwareStats.get_labware_type(), values='Count', names='Type', hole=.3)
+fig1.update_traces(textposition = 'inside')
+c2.header('Labware Status')
+fig2 = px.pie(labwareStats.get_labware_status(), values='Count', names='Status', hole=.3)
+fig2.update_traces(textposition = 'inside')
+c1.plotly_chart(fig1)
+c2.plotly_chart(fig2)
 
-# Labware Manufacturer for Well Plates and Tip Racks
+# Manufacturers/Well Plate Manufacturer
 c1, c2 = st.beta_columns((1, 1))
-c1.header('Well Plate Manufacturers')
-fig = px.pie(wellplate_manufacturers_df, values='Count', names='Manufacturer', hole=.3)
-fig.update_traces(textposition = 'inside')
-c1.plotly_chart(fig)
-c2.header('Tip Manufacturers')
-fig = px.pie(tip_manufacturers_df, values='Count', names='Manufacturer', hole=.3)
-fig.update_traces(textposition = 'inside')
-c2.plotly_chart(fig)
+c1.header('Labware Manufacturers')
+fig1 = px.pie(labwareStats.get_manufacturer_count(), values='Count', names='Manufacturer', hole=.3)
+fig1.update_traces(textposition = 'inside')
+c1.plotly_chart(fig1)
+c2.header('Well Plate Manufacturers')
+fig2 = px.pie(labwareStats.get_wellplate_manufacturers(), values='Count', names='Manufacturer', hole=.3)
+c2.plotly_chart(fig2)
+
+# Tip Manufacturer
+c1, c2 = st.beta_columns((1, 1))
+c1.header('Tip Manufacturers')
+fig1 = px.pie(labwareStats.get_tip_manufacturers(), values='Count', names='Manufacturer', hole=.3)
+fig1.update_traces(textposition = 'inside')
+c1.plotly_chart(fig1)
 
 hide_streamlit_style = """
             <style>
