@@ -92,6 +92,12 @@ class DataProcessor:
         df.columns = ['Manufacturer', 'Count']
         return df
 
+    def get_lc_tool_data(self):
+        df = pd.DataFrame(self.data['Have you seen our Labware Creator tool?'].value_counts().to_frame())
+        df = df.reset_index()
+        df.columns = ['Prompts', 'Count']
+        return df
+
 def get_two_week_date():
     today = datetime.date.today() 
     two_weeks_ago = today - timedelta(days=90)
@@ -146,6 +152,10 @@ c1.header('Tip Manufacturers')
 fig1 = px.pie(labwareStats.get_tip_manufacturers(), values='Count', names='Manufacturer', hole=.3)
 fig1.update_traces(textposition = 'inside')
 c1.plotly_chart(fig1)
+c2.header('Labware Creator Tool')
+fig2 = px.pie(labwareStats.get_lc_tool_data(), values='Count', names='Prompts', hole=.3)
+fig2.update_traces(textposition = 'inside')
+c2.plotly_chart(fig2)
 
 hide_streamlit_style = """
             <style>
