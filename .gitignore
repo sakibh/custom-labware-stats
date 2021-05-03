@@ -1,3 +1,6 @@
 env/
 __pycache__/
 notes
+token_sheets_v4.pickle
+credentials.json
+secret.py

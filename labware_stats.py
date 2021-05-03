@@ -9,6 +9,7 @@ from Google import Create_Service
 import re
 import datetime
 from datetime import timedelta
+from secret import sheets_id
 
 CLIENT_SECRET_FILE = 'credentials.json'
 API_NAME = 'sheets'
@@ -17,7 +18,7 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 
-spreadsheet_id = '***REMOVED***'
+spreadsheet_id = sheets_id
 
 result = service.spreadsheets().values().get(
     spreadsheetId=spreadsheet_id,
