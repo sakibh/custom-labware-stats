@@ -10,7 +10,7 @@ import re
 import datetime
 from datetime import timedelta
 
-CLIENT_SECRET_FILE = 'credentials.json'
+CLIENT_SECRET_FILE = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
 API_NAME = 'sheets'
 API_VERSION = 'v4'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
