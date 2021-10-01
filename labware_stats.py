@@ -63,7 +63,7 @@ class DataProcessor:
         labware_tips_count = df[df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)].sum()
         df2 = {'Type': 'Tips', 'Count': labware_tips_count['Count']}
         df = df[~df.Type.str.contains('Tip', flags=re.IGNORECASE, regex=True)]
-        df = df.append(df2, ignore_index = True)
+        df = df.append(df2, ignore_index=True)
         return df
 
     def get_labware_status(self):
@@ -99,10 +99,12 @@ class DataProcessor:
         df.columns = ['Prompts', 'Count']
         return df
 
+
 def get_two_week_date():
-    today = datetime.date.today() 
-    two_weeks_ago = today - timedelta(days=90)
+    today = datetime.date.today()
+    two_weeks_ago = today - timedelta(days=365)
     return two_weeks_ago
+
 
 labwareStats = DataProcessor(df)
 
@@ -124,16 +126,29 @@ if st.button('Run'):
 
 # Bi-Weekly Data Chart
 st.header(f'Total Labware Requests: {len(labwareStats.get_data())}')
-st.bar_chart(labwareStats.get_biweekly_data())
+# st.bar_chart(labwareStats.get_biweekly_data())
 
 # Labware Types/Status
 c1, c2 = st.beta_columns((1, 1))
 c1.header('Labware Types')
-fig1 = px.pie(labwareStats.get_labware_type(), values='Count', names='Type', hole=.3)
-fig1.update_traces(textposition = 'inside')
+# fig1 = px.pie(labwareStats.get_labware_type(), values='Count', names='Type', hole=.3)
+# fig1.update_traces(textposition = 'inside')
+# c1.write(labwareStats.get_labware_type())
+fig1 = go.Figure(data=[go.Table(
+        header=dict(values=list(labwareStats.get_labware_type().columns),
+                    fill_color='lightskyblue',
+                    align='left'),
+        cells=dict(values=[labwareStats.get_labware_type().Type, labwareStats.get_labware_type().Count],
+                   fill_color='rgba(0,0,0,0)',
+                   font=dict(color='white', size=18),
+                   height=40,
+                   align='left'))
+    ])
+
 c2.header('Labware Status')
 fig2 = px.pie(labwareStats.get_labware_status(), values='Count', names='Status', hole=.3)
 fig2.update_traces(textposition = 'inside')
+fig1.update_layout(width=800, height=640)
 c1.plotly_chart(fig1)
 c2.plotly_chart(fig2)
 
