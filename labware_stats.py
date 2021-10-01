@@ -18,7 +18,7 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
 service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 
-spreadsheet_id = sheets_id
+spreadsheet_id = os.environ.get('SHEETS_ID')
 
 result = service.spreadsheets().values().get(
     spreadsheetId=spreadsheet_id,
