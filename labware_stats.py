@@ -9,7 +9,6 @@ from Google import Create_Service
 import re
 import datetime
 from datetime import timedelta
-from secret import sheets_id
 
 CLIENT_SECRET_FILE = 'credentials.json'
 API_NAME = 'sheets'
