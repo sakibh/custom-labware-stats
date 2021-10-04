@@ -37,6 +37,7 @@ df['Submitted At'] = pd.to_datetime(df['Submitted At']).dt.normalize()
 # Clean Up Manufacturers Data
 df['Manufacturer'][df['Manufacturer'] == 'Manufacturer not listed below'] = df['< text field']
 
+
 class DataProcessor:
     def __init__(self, data):
         self.data = data
@@ -165,11 +166,11 @@ c2.plotly_chart(fig2)
 c1, c2 = st.beta_columns((1, 1))
 c1.header('Tip Manufacturers')
 fig1 = px.pie(labwareStats.get_tip_manufacturers(), values='Count', names='Manufacturer', hole=.3)
-fig1.update_traces(textposition = 'inside')
+fig1.update_traces(textposition='inside')
 c1.plotly_chart(fig1)
 c2.header('Labware Creator Tool')
 fig2 = px.pie(labwareStats.get_lc_tool_data(), values='Count', names='Prompts', hole=.3)
-fig2.update_traces(textposition = 'inside')
+fig2.update_traces(textposition='inside')
 c2.plotly_chart(fig2)
 
 hide_streamlit_style = """
